@@ -1297,11 +1297,19 @@ function mergeRoster(){
   if(!s.prereq) return;
   const haveKey  = new Set(s.submitted.map(x => x.k).filter(Boolean));
   const haveName = new Set(s.submitted.map(x => x.name));
+  // 제출 파일에 등장한 반만 대상으로 미제출자를 채운다 — 특정 반만 올렸을 때
+  // 파일에 없는 다른 반 전체가 "미제출"로 딸려 나오는 걸 막기 위함.
+  // 제출 파일에서 반을 하나도 특정하지 못했다면(학년·반 인식 실패) 어느 반이 빠졌는지
+  // 판단할 근거가 없으므로, 이 경우 미제출자 채우기를 아예 하지 않는다.
+  const submittedClasses = new Set(s.submitted.map(x => `${x.grade ?? "?"}-${x.cls ?? "?"}`).filter(k => k !== "?-?"));
+  if(!submittedClasses.size) return;
   const extra = [];
   s.prereq.byKey.forEach((rec, k) => {
     if(haveKey.has(k)) return;
     if(rec.name && haveName.has(rec.name)) return;
     const [gr, c, n] = k.split("-").map(Number);
+    const clsKey = `${gr}-${c}`;
+    if(!submittedClasses.has(clsKey)) return;
     extra.push({
       key: k + "|" + (rec.name || ""),
       name: rec.name || "(이름 없음)",
@@ -1743,6 +1751,7 @@ function printPage(list, label){
 $("pdfBtn").onclick = () => {
   const s = S();
   if(!s.students.length){ toast("먼저 명단을 불러와 주세요"); return; }
+  const g = G();
 
   let html = "";
   if(s.clsPick === "all"){
@@ -1763,6 +1772,15 @@ $("pdfBtn").onclick = () => {
 
   $("print").innerHTML = html;
   markClean();
+
+  // 인쇄 대화상자의 기본 저장 파일명은 문서 제목을 따르므로, 불러온 데이터에 맞춰 임시로 바꿔 준다
+  const origTitle = document.title;
+  const clsPart = s.clsPick === "all" ? "전체" : pickLabel();
+  document.title = `과목 선택 점검표 ${g.label} ${clsPart}`;
+  const restoreTitle = () => { document.title = origTitle; window.removeEventListener("afterprint", restoreTitle); };
+  window.addEventListener("afterprint", restoreTitle);
+  setTimeout(restoreTitle, 15000); // afterprint가 안 뜨는 환경 대비 안전장치
+
   toast(s.clsPick === "all" ? "인쇄 창에서 대상을 'PDF로 저장'으로 고르세요 — 반마다 새 장입니다" : "인쇄 창에서 대상을 'PDF로 저장'으로 고르세요");
   setTimeout(() => window.print(), 400);
 };
