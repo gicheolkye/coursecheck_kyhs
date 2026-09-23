@@ -1773,10 +1773,13 @@ $("pdfBtn").onclick = () => {
   $("print").innerHTML = html;
   markClean();
 
-  // 인쇄 대화상자의 기본 저장 파일명은 문서 제목을 따르므로, 불러온 데이터에 맞춰 임시로 바꿔 준다
+  // 인쇄 대화상자의 기본 저장 파일명은 문서 제목을 따르므로, 불러온 데이터에 맞춰 임시로 바꿔 준다.
+  // PDF 제목에는 실제 학생들의 현재 학년(탭 라벨보다 한 학년 아래)을 쓴다 — 예: 3학년 탭 → PDF엔 "2학년"
+  const PDF_GRADE_LABEL = {"2학년":"1학년", "3학년":"2학년"};
+  const pdfGradeLabel = PDF_GRADE_LABEL[g.label] || g.label;
   const origTitle = document.title;
   const clsPart = s.clsPick === "all" ? "전체" : pickLabel();
-  document.title = `과목 선택 점검표 ${g.label} ${clsPart}`;
+  document.title = `과목 선택 점검표 ${pdfGradeLabel} ${clsPart}`;
   const restoreTitle = () => { document.title = origTitle; window.removeEventListener("afterprint", restoreTitle); };
   window.addEventListener("afterprint", restoreTitle);
   setTimeout(restoreTitle, 15000); // afterprint가 안 뜨는 환경 대비 안전장치
